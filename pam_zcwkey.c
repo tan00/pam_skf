@@ -24,7 +24,6 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const c
 }
 
 PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, const char **argv ) {
-
     const char *user;
     char  *password;
     int pam_err, retry;
@@ -57,32 +56,24 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
         pam_prompt(pamh , PAM_ERROR_MSG,  &resposemsg,"read form ukey failed ret = %x \n",ret);
         return PAM_CRED_INSUFFICIENT;
     }
-
     //如果未初始化，写入key
     if ( authfile.inited != 1){
         AUTHFILE_EncryptPwd(&authfile,NULL);
         AUTHFILE_Write(&authfile);
         return PAM_SUCCESS;
     }
-
     //如果已初始化，对比用户名和密码
-
     pam_prompt(pamh , PAM_TEXT_INFO,  &resposemsg,"pam_sm_authenticate get from promot  user =%s  password =%s \n" ,user,password);
     pam_prompt(pamh , PAM_TEXT_INFO,  &resposemsg,"pam_sm_authenticate  read from usbkey user =%s  password =%s \n",authfile.user,authfile.enc_passwd);
-
     //比较用户名密码
     if (memcmp(user,authfile.user,strlen(user)) != 0){
        //return PAM_AUTH_ERR;
-       return PAM_SUCCESS;
     }
-
     AUTHFILE authFromUser;
     AUTHFILE_EncryptPwd(&authFromUser,password);
     if (memcmp(authFromUser.enc_passwd ,authfile.enc_passwd,strlen(authFromUser.enc_passwd)) != 0){
         //return PAM_AUTH_ERR;
-        return PAM_SUCCESS;
     }
-
     return (PAM_SUCCESS);
 }
 

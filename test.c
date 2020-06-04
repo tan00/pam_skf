@@ -101,6 +101,7 @@ int main(int argc, char *argv[])
     }
 
     retval = pam_start("check_user", user, &conv, &pamh);
+    //pam_set_item(&pamh,PAM_AUTHTOK,"123456");
 
     if (retval == PAM_SUCCESS)
         retval = pam_authenticate(pamh, 0);    /* is user really user? */
