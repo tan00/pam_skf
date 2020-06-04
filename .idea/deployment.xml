@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="mycent (9a13a2a6-fcb3-4d3c-8ca2-6a541cbc4966)">
+    <serverData>
+      <paths name="mycent (9a13a2a6-fcb3-4d3c-8ca2-6a541cbc4966)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/zcw/work/pam_zcwkey" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
