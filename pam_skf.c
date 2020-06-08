@@ -10,16 +10,9 @@
 #include "include/dev_manager.h"
 #include "auth.h"
 
-
-
 /* expected hook */
 PAM_EXTERN int pam_sm_setcred( pam_handle_t *pamh, int flags, int argc, const char **argv ) {
-    printf(">>>>>pam_sm_setcred \n ");
-    return PAM_SUCCESS;
-}
-
-PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char **argv) {
-    printf(">>>> pam_sm_acct_mgmt\n");
+    printf(">>>> pam_sm_setcred\n ");
     return PAM_SUCCESS;
 }
 
@@ -28,7 +21,6 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
     char  *password;
     int pam_err, retry;
     int ret = 0;
-    char *resposemsg = NULL;
 
     // get user
     if ((pam_err = pam_get_user(pamh, &user, NULL)) != PAM_SUCCESS)
@@ -50,30 +42,36 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
 
 
     AUTHFILE authfile;
+    memset(&authfile,0,sizeof authfile);
     ret = AUTHFILE_Read(&authfile);
     if (ret!=0){
-        pam_prompt(pamh , PAM_ERROR_MSG,  &resposemsg,"pam_sm_authenticate  read from usbkey user =%s  password =%s \n",authfile.user,authfile.enc_passwd);
-        pam_prompt(pamh , PAM_ERROR_MSG,  &resposemsg,"read form ukey failed ret = %x \n",ret);
+        pam_prompt(pamh , PAM_ERROR_MSG,  NULL,"read form ukey failed！does ukey inited? \n");
         return PAM_CRED_INSUFFICIENT;
     }
-    //如果未初始化，写入key
+
+    //文件存在，但是没有内容
     if ( authfile.inited != 1){
-        AUTHFILE_EncryptPwd(&authfile,NULL);
-        AUTHFILE_Write(&authfile);
-        return PAM_SUCCESS;
+        pam_prompt(pamh , PAM_TEXT_INFO,  NULL,"writing token to ukey\n");
+        authfile.inited = 1;
+        strcpy(authfile.user , user);
+        strcpy(authfile.enc_passwd , password);
+        ret = AUTHFILE_Write(&authfile);
+        if(ret!=0){
+            pam_prompt(pamh , PAM_TEXT_INFO,  NULL,"failed write token to ukey\n");
+        }
     }
-    //如果已初始化，对比用户名和密码
-    pam_prompt(pamh , PAM_TEXT_INFO,  &resposemsg,"pam_sm_authenticate get from promot  user =%s  password =%s \n" ,user,password);
-    pam_prompt(pamh , PAM_TEXT_INFO,  &resposemsg,"pam_sm_authenticate  read from usbkey user =%s  password =%s \n",authfile.user,authfile.enc_passwd);
+
     //比较用户名密码
     if (memcmp(user,authfile.user,strlen(user)) != 0){
-       //return PAM_AUTH_ERR;
+       return PAM_AUTH_ERR;
     }
     AUTHFILE authFromUser;
+    memset(&authFromUser,0,sizeof authFromUser);
     AUTHFILE_EncryptPwd(&authFromUser,password);
     if (memcmp(authFromUser.enc_passwd ,authfile.enc_passwd,strlen(authFromUser.enc_passwd)) != 0){
-        //return PAM_AUTH_ERR;
+        return PAM_AUTH_ERR;
     }
+    END:
     return (PAM_SUCCESS);
 }
 

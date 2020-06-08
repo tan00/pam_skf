@@ -9,9 +9,9 @@
 #include <string.h>
 #include <stdio.h>
 
-//const char *gAppName = "appNameLoginAuth";
-const char *gAppName = "myapp";
-const char *gFileName = "fileNameLoginAuth";
+const char *gAppName = "appAuth";
+//const char *gAppName = "myapp";
+const char *gFileName = "fileAuth";
 const char *gAdminPIN = "zcwadminpin";
 //const char *gUserPIN = "zcwuserpin";
 const char *gUserPIN = "123456";
@@ -26,6 +26,21 @@ DEVMANAGER *DEVMANAGER_new() {
     strcpy(ptr->adminPIN, gAdminPIN);
     strcpy(ptr->userPIN, gUserPIN);
     return ptr;
+}
+
+void DEVMANAGER_free(DEVMANAGER* devman){
+    if (devman==NULL){
+        return;
+    }
+    if(devman->happlication){
+        SKF_CloseApplication(devman->happlication);
+        devman->happlication = NULL;
+    }
+    if(devman->devhandle){
+        SKF_CloseHandle(devman->devhandle);
+        devman->devhandle = NULL;
+    }
+    free(devman);
 }
 
 
@@ -45,6 +60,10 @@ int singleListToMultiList(char *list, char newlist[32][128], int *rownum) {
 
 
 int DEVMANAGE_PromtDevname(DEVMANAGER *ptr) {
+    if ( strlen(ptr->devName) != 0 ){
+        return 0;
+    }
+
     ULONG ulReval = SAR_FAIL;
     char nameList[1024];
     memset(nameList, 0, sizeof nameList);
@@ -63,8 +82,25 @@ int DEVMANAGE_PromtDevname(DEVMANAGER *ptr) {
     //如果只有一个设备
     if (devCnt == 1) {
         strcpy(ptr->devName, devList[0]);
-    } else {//有多个设备， 提示用户输入
-        //todo
+    } else if(devCnt > 1){//有多个设备， 提示用户输入
+        printf("found %d usb device \n",devCnt);
+        int i= 0;
+        for(;i<devCnt;i++){
+            printf("%d. %s\n",(i+1),devList[i]);
+        }
+        printf("input the device num : ");
+        int choice = 0;
+        scanf("%d",&choice);
+        choice -= 0x30;//转换为数字
+        choice -= 1;
+        if(choice<0 || choice>=devCnt){
+            printf("error choice  \n");
+            return -1;
+        }
+        strcpy(ptr->devName, devList[choice]);
+    }else{
+        printf("no ukey dev found \n");
+        return -1;
     }
     return 0;
 }
@@ -72,7 +108,16 @@ int DEVMANAGE_PromtDevname(DEVMANAGER *ptr) {
 //DEVMANAGER_OpenDev 获取设备句柄
 //如果只有一个设备，则打开该设备  如果有多个则询问用户选择设置
 int DEVMANAGER_OpenDev(DEVMANAGER *ptr) {
+    if (ptr->devhandle != NULL){
+        return 0;
+    }
     ULONG ulReval = SAR_FAIL;
+    ulReval = DEVMANAGE_PromtDevname(ptr);
+    if (ulReval!=SAR_OK){
+        return ulReval;
+    }
+
+
     ulReval = SKF_ConnectDev((LPSTR) ptr->devName, &ptr->devhandle);
     if (ulReval != SAR_OK) {
         ShowErrInfo(ulReval);
@@ -102,75 +147,6 @@ int DEVMANAGER_VerifyPIN(DEVMANAGER* ptr){
     return 0;
 }
 
-//恢复出厂设置 清空key内app
-int DEVMANAGER_FactoryReset() {
-    int ret = 0;
-    int MaxRetryCnt = 0;
-    ULONG ulReval = SAR_FAIL;
-    char nameList[1024];
-    memset(nameList, 0, sizeof nameList);
-    ULONG ulBufSize = sizeof nameList;
-    int appCnt = 0;
-    char appList[32][128];
-    memset(appList, 0, sizeof appList);
-
-    DEVMANAGER *devman = DEVMANAGER_new();
-    DEVMANAGE_PromtDevname(devman);
-    DEVMANAGER_OpenDev(devman);
-
-    DEVMANAGE_PromtAdminPin(devman);
-
-
-    printf("get admin pin : %s \n" , devman->adminPIN);
-
-    //todo 只能解锁用户pin ， 如果遇到管理员PIN也锁住了 该怎么办？
-    ret = SKF_UnblockPIN(devman->happlication, devman->adminPIN, devman->userPIN, &MaxRetryCnt);
-    if (ret != SAR_OK) {
-        ShowErrInfo(ulReval);
-        return ret;
-    }
-
-    ret = SKF_EnumApplication(devman->devhandle, nameList, &ulBufSize);
-    if (ret != SAR_OK) {
-        ShowErrInfo(ulReval);
-        return ret;
-    }
-
-    singleListToMultiList(nameList, appList, &appCnt);
-
-    int i = 0;
-    for (; i < appCnt; i++) {
-        SKF_DeleteApplication(devman->devhandle, appList[i]);
-    }
-
-    SKF_CloseHandle(devman->devhandle);
-    devman->devhandle = NULL;
-    return 0;
-}
-
-//创建默认应用和文件
-int DEVMANAGER_FactoryInit() {
-    int ret = 0;
-    DEVMANAGER *devman = DEVMANAGER_new();
-    DEVMANAGE_PromtDevname(devman);
-    DEVMANAGER_OpenDev(devman);
-
-    ret = SKF_CreateApplication(devman->devhandle, devman->appName, \
-            devman->adminPIN, gMaxRetryCnt, devman->userPIN, gMaxRetryCnt, \
-            SECURE_USER_ACCOUNT, &devman->happlication);
-    if (ret != SAR_OK) {
-        ShowErrInfo(ret);
-        return ret;
-    }
-
-    ret = SKF_CreateFile(devman->happlication, devman->fileName, gFileLen, SECURE_USER_ACCOUNT, SECURE_USER_ACCOUNT);
-    if (ret != SAR_OK) {
-        ShowErrInfo(ret);
-        return ret;
-    }
-    return ret;
-}
-
 
 //提示用户输入管理员pin码
 int DEVMANAGE_PromtAdminPin(DEVMANAGER *ptr) {
@@ -182,6 +158,7 @@ int DEVMANAGE_PromtAdminPin(DEVMANAGER *ptr) {
         FlushStdin();
         printf("input admin PIN:");
         scanf("%s", adminPin);
+
         if (1 == Isdigits(adminPin)) {
             strcpy(ptr->adminPIN, adminPin);
             return 0;
@@ -189,4 +166,67 @@ int DEVMANAGE_PromtAdminPin(DEVMANAGER *ptr) {
         printf("your input is not nums ");
     }
     return -1;
+}
+
+
+
+//设备认证
+int DEVMANAGER_DevAuth(DEVMANAGER *devman){
+    ULONG ret = 0 ;
+    char* errmsg = NULL;
+    DEVINFO devInfo;
+
+    ret = DEVMANAGE_PromtDevname(devman);
+    if(ret!=0){
+        return ret;
+    }
+    DEVMANAGER_OpenDev(devman);
+
+    BYTE random[16] = {0};
+    ret = SKF_GetDevInfo(devman->devhandle, &devInfo);
+    if (ret != SAR_OK){
+        errmsg = "SKF_GetDevInfo";
+        goto END;
+    }
+
+    ret = SKF_GenRandom(devman->devhandle, random, 8);
+    if (ret != SAR_OK){
+        errmsg = "SKF_GenRandom";
+        goto END;
+    }
+
+    BYTE devKey[16] = {0};
+    memcpy(devKey, (BYTE*)"1234567812345678", 16);
+    HANDLE SessionKey = NULL;
+    ret = SKF_SetSymmKey(devman->devhandle, devKey, devInfo.DevAuthAlgId, &SessionKey);
+    if (ret != SAR_OK){
+        errmsg = "SKF_SetSymmKey";
+        goto END;
+    }
+
+    BLOCKCIPHERPARAM param = {0};
+    ret = SKF_EncryptInit(SessionKey, param);
+    if (ret != SAR_OK){
+        errmsg = "SKF_EncryptInit";
+        goto END;
+    }
+
+    BYTE devkeyenc[16] = {0};
+    DWORD dwResultLen = 16;
+    ret = SKF_Encrypt(SessionKey, random, 16, devkeyenc, &dwResultLen);
+    if (ret != SAR_OK){
+        errmsg = "SKF_Encrypt";
+        goto END;
+    }
+
+    ret = SKF_DevAuth(devman->devhandle, devkeyenc, 16);
+    if (ret != SAR_OK){
+        errmsg = "SKF_DevAuth";
+        goto END;
+    }
+
+    END:
+    if (errmsg){ printf("%s \t",errmsg);}
+    ShowErrInfo(ret);
+    return  ret;
 }

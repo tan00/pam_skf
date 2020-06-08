@@ -10,9 +10,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <security/pam_appl.h>
-#include <security/pam_modules.h>
-#include <security/pam_ext.h>
 #include "include/cJSON.h"
 #include "sm3.h"
 
@@ -21,31 +18,6 @@ extern const char *gFileName;
 extern const char *gAdminPIN;
 extern const char *gUserPIN;
 
-///////////////////////////////////////////////////////
-//AUTHFILE_InitWriteFile 初始化写入认证凭据
-int AUTHFILE_InitWriteFile(AUTHFILE *authfile) {
-    int ret = 0;
-    if ((ret = AUTHFILE_CheckArgs(authfile)) != 0) {
-        return ret;
-    }
-
-    if (authfile->inited != 0) {
-        return ERR_INITED_FLAG;
-    }
-
-    DEVMANAGER *devman = DEVMANAGER_new();
-    DEVMANAGE_PromtDevname(devman);
-
-    ret = DEVMANAGER_FactoryReset(devman);
-    if (ret != 0) {
-
-    }
-    ret = DEVMANAGER_FactoryInit(devman);
-
-    printf("InitWriteFile:: init authfile write byte : %d \n", ret);
-
-    return 0;
-}
 
 
 int AUTHFILE_CheckArgs(AUTHFILE *authfile) {
@@ -65,14 +37,26 @@ int AUTHFILE_CheckArgs(AUTHFILE *authfile) {
 int AUTHFILE_Read(AUTHFILE *authfile) {
     int ret = 0;
     DEVMANAGER *devman = DEVMANAGER_new();
-    DEVMANAGE_PromtDevname(devman);
-    DEVMANAGER_OpenDev(devman);
-    DEVMANAGER_OpenApp(devman);
+    ret = DEVMANAGE_PromtDevname(devman);
+    if (ret!=SAR_OK){
+        goto END;
+    }
+
+    ret = DEVMANAGER_OpenDev(devman);
+    if (ret!=SAR_OK){
+        SOFT_LOG_ERR("OpenDev error  ret= %x\n", ret);
+        goto END;
+    }
+    ret = DEVMANAGER_OpenApp(devman);
+    if (ret!=SAR_OK){
+        SOFT_LOG_ERR("OpenApp error  ret= %x , does ukey inited\n", ret);
+        goto END;
+    }
 
     ret = DEVMANAGER_VerifyPIN(devman);
     if (ret != SAR_OK) {
-        SOFT_LOG_ERR("DEVMANAGER_VerifyPIN error  ret= %x\n", ret);
-        return ret;
+        SOFT_LOG_ERR("VerifyPIN error  ret= %x\n", ret);
+        goto END;
     }
 
     unsigned char jsonStr[1024];
@@ -82,18 +66,26 @@ int AUTHFILE_Read(AUTHFILE *authfile) {
     ret = SKF_ReadFile(devman->happlication, devman->fileName, 0, sizeof jsonStr, NULL, &size);
     if (ret != SAR_OK) {
         SOFT_LOG_ERR("SKF_ReadFile ret = %d \n", ret);
-        return ret;
+        goto END;
+    }
+
+    if (size == 0)//有文件，但是没有内容
+    {
+        goto END;
     }
 
     ret = SKF_ReadFile(devman->happlication, devman->fileName, 0, size, jsonStr, &size);
     if (ret != SAR_OK) {
         SOFT_LOG_ERR("SKF_ReadFile ret = %d \n", ret);
-        return ret;
+        goto END;
     }
+
     SOFT_LOG_DEBUG("SKF_ReadFile readlen = %d \n  jsonStr = %s \n", size, jsonStr);
 
     AUTHFILE_Unmarshal(authfile, jsonStr);
 
+    END:
+    DEVMANAGER_free(devman);
     return ret;
 }
 
@@ -101,14 +93,27 @@ int AUTHFILE_Read(AUTHFILE *authfile) {
 int AUTHFILE_Write(AUTHFILE *authfile) {
     int ret = 0;
     DEVMANAGER *devman = DEVMANAGER_new();
-    DEVMANAGE_PromtDevname(devman);
-    DEVMANAGER_OpenDev(devman);
-    DEVMANAGER_OpenApp(devman);
+    ret = DEVMANAGE_PromtDevname(devman);
+    if (ret!=SAR_OK){
+        SOFT_LOG_ERR("DEVMANAGE_PromtDevname");
+        goto END;
+    }
+    ret = DEVMANAGER_OpenDev(devman);
+    if (ret!=SAR_OK){
+        SOFT_LOG_ERR("DEVMANAGER_OpenDev");
+        goto END;
+    }
+
+    ret = DEVMANAGER_OpenApp(devman);
+    if (ret!=SAR_OK){
+        SOFT_LOG_ERR("DEVMANAGER_OpenApp");
+        goto END;
+    }
 
     ret = DEVMANAGER_VerifyPIN(devman);
     if (ret != SAR_OK) {
         SOFT_LOG_ERR("DEVMANAGER_VerifyPIN error  ret= %x\n", ret);
-        return ret;
+        goto END;
     }
 
     unsigned char jsonStr[1024];
@@ -120,11 +125,13 @@ int AUTHFILE_Write(AUTHFILE *authfile) {
     ret = SKF_WriteFile(devman->happlication, devman->fileName, 0, jsonStr, size);
     if (ret != SAR_OK) {
         SOFT_LOG_ERR("SKF_WriteFile ret = %d \n", ret);
-        return ret;
+        goto END;
     }
     SOFT_LOG_DEBUG("SKF_WriteFile ret = %d \n", ret);
 
-    return 0;
+    END:
+    DEVMANAGER_free(devman);
+    return ret;
 }
 
 //AUTHFILE_EncryptPwd 计算pwd的摘要
@@ -156,13 +163,16 @@ int AUTHFILE_Marshal(AUTHFILE *authptr, BYTE *buf, int *len) {
     char *dumpstr = cJSON_Print(root);
     if (buf == NULL) {
         *len = strlen(dumpstr);
-        return 0;
+        goto END;
     }
     if (*len <= strlen(dumpstr)) {
-        return -1;
+        goto END;
     }
+
     strcpy(buf, dumpstr);
     *len = strlen(dumpstr);
+
+    END:
     free(dumpstr);
     cJSON_Delete(root);
     return 0;
@@ -176,6 +186,8 @@ int AUTHFILE_Unmarshal(AUTHFILE *authptr, BYTE *serial) {
     strcpy(authptr->user, cJSON_GetObjectItem(root, "user")->valuestring);
     strcpy(authptr->enc_passwd, cJSON_GetObjectItem(root, "enc_passwd")->valuestring);
 
+    END:
+    cJSON_Delete(root);
     return 0;
 }
 

@@ -8,16 +8,17 @@
 
 //设备认证数据
 typedef struct _DEVAUTHDATA{
-    char       devName[128];
+    char       devName[33];
     DEVHANDLE  devhandle;
     HAPPLICATION happlication;
-    char appName[128];
-    char fileName[128];
-    char adminPIN[32];
-    char userPIN[32];
+    char appName[33];
+    char fileName[33];
+    char adminPIN[33];
+    char userPIN[33];
 }DEVMANAGER;
 
 DEVMANAGER* DEVMANAGER_new();
+void DEVMANAGER_free(DEVMANAGER* devman);
 
 //获取设备名，如果只有一个设备，则使用该设备名，如果有多个设备，则由用户输入
 int DEVMANAGE_PromtDevname(DEVMANAGER* ptr);
@@ -29,11 +30,10 @@ int DEVMANAGER_OpenApp(DEVMANAGER* ptr);
 //认证pin
 int DEVMANAGER_VerifyPIN(DEVMANAGER* ptr);
 
-//恢复出厂设置 清空key内app
-int DEVMANAGER_FactoryReset();
-//创建默认应用和文件
-int DEVMANAGER_FactoryInit();
 //提示用户输入管理员pin码
 int DEVMANAGE_PromtAdminPin(DEVMANAGER* ptr);
+
+//设备认证
+int DEVMANAGER_DevAuth(DEVMANAGER *devman);
 
 #endif //PAM_ZCWKEY_DEV_MANAGER_H

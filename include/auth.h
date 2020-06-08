@@ -11,16 +11,13 @@
 //AUTHFILE 写入key中的数据
 typedef struct _AUTHFILE{
     int  inited;  //json:inited
-    char user[32+1]; //json:user
-    char enc_passwd[64+1];//json:enc_passwd
+    char user[33]; //json:user
+    char enc_passwd[65];//json:enc_passwd
 }AUTHFILE ;
 
 int  AUTHFILE_Marshal(AUTHFILE* authptr, BYTE* serial, int* len);
 int   AUTHFILE_Unmarshal(AUTHFILE* authptr,  BYTE* serial);
 
-
-//AUTHFILE_InitWriteFile 初始化写入认证凭据
-int AUTHFILE_InitWriteFile(AUTHFILE* authfile);
 
 //AUTHFILE_Read 读取key内已有的认证凭据
 int AUTHFILE_Read(AUTHFILE* authfile);

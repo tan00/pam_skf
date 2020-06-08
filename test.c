@@ -34,7 +34,7 @@ int test_auth_marshal(){
 int test_devman() {
     DEVMANAGER *devman = DEVMANAGER_new();
     //DEVMANAGER_FactoryReset(devman);
-    DEVMANAGER_FactoryInit(devman);
+    //DEVMANAGER_FactoryInit(devman);
 
     return 0;
 }
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 {
     pam_handle_t *pamh=NULL;
     int retval;
-    const char *user="nobody";
+    const char *user="zcw";
 
     if(argc == 2) {
         user = argv[1];
