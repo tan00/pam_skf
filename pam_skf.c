@@ -1,18 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <security/pam_appl.h>
 #include <security/pam_modules.h>
 #include <security/pam_ext.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include "include/dev_manager.h"
+
 #include "auth.h"
 
 /* expected hook */
 PAM_EXTERN int pam_sm_setcred( pam_handle_t *pamh, int flags, int argc, const char **argv ) {
-    printf(">>>> pam_sm_setcred\n ");
     return PAM_SUCCESS;
 }
 
@@ -45,7 +39,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
     memset(&authfile,0,sizeof authfile);
     ret = AUTHFILE_Read(&authfile);
     if (ret!=0){
-        pam_prompt(pamh , PAM_ERROR_MSG,  NULL,"read form ukey failed！does ukey inited? \n");
+        pam_prompt(pamh , PAM_ERROR_MSG,  NULL,"read from ukey failed！\n");
         return PAM_CRED_INSUFFICIENT;
     }
 

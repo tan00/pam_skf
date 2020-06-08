@@ -26,7 +26,7 @@ extern "C" {
 
 
 
-#define SOFT_LOG_ENABLE 1
+#define SOFT_LOG_ENABLE 0
 
 #if SOFT_LOG_ENABLE
 #define SOFT_LOG_EMERGE(fmt, ARGS...)	printf("[EMERGE][F:%s][L:%d]: "fmt"\n",__FUNCTION__,__LINE__, ##ARGS)
