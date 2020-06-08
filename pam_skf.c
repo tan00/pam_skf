@@ -71,7 +71,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
     if (memcmp(authFromUser.enc_passwd ,authfile.enc_passwd,strlen(authFromUser.enc_passwd)) != 0){
         return PAM_AUTH_ERR;
     }
-    END:
+
     return (PAM_SUCCESS);
 }
 

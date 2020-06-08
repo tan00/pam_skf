@@ -35,7 +35,7 @@ int AUTHFILE_CheckArgs(AUTHFILE *authfile) {
 
 
 int AUTHFILE_Read(AUTHFILE *authfile) {
-    int ret = 0;
+    ULONG ret = 0;
     DEVMANAGER *devman = DEVMANAGER_new();
     ret = DEVMANAGE_PromtDevname(devman);
     if (ret!=SAR_OK){
@@ -61,7 +61,7 @@ int AUTHFILE_Read(AUTHFILE *authfile) {
 
     unsigned char jsonStr[1024];
     memset(jsonStr, 0, sizeof jsonStr);
-    int size = sizeof jsonStr;
+    ULONG size = sizeof jsonStr;
     //获取文件有效数据大小
     ret = SKF_ReadFile(devman->happlication, devman->fileName, 0, sizeof jsonStr, NULL, &size);
     if (ret != SAR_OK) {
@@ -147,9 +147,9 @@ int AUTHFILE_EncryptPwd(AUTHFILE *authfile, char *pwd) {
     }else{
         return -1;//没有可用的密码
     }
-    sm3(tpwd, strlen(tpwd),digest);
+    sm3((unsigned char*)tpwd, strlen(tpwd),digest);
 
-    BufToHex(digest,32,authfile->enc_passwd);
+    BufToHex((char*)digest,32,authfile->enc_passwd);
     return 0;
 }
 
@@ -169,7 +169,7 @@ int AUTHFILE_Marshal(AUTHFILE *authptr, BYTE *buf, int *len) {
         goto END;
     }
 
-    strcpy(buf, dumpstr);
+    strcpy((char*)buf, dumpstr);
     *len = strlen(dumpstr);
 
     END:
@@ -180,13 +180,12 @@ int AUTHFILE_Marshal(AUTHFILE *authptr, BYTE *buf, int *len) {
 
 //json字符串导入为AUTHFILE结构体
 int AUTHFILE_Unmarshal(AUTHFILE *authptr, BYTE *serial) {
-    cJSON *root = cJSON_Parse(serial);
+    cJSON *root = cJSON_Parse((char*)serial);
 
     authptr->inited = cJSON_GetObjectItem(root, "inited")->valueint;
     strcpy(authptr->user, cJSON_GetObjectItem(root, "user")->valuestring);
     strcpy(authptr->enc_passwd, cJSON_GetObjectItem(root, "enc_passwd")->valuestring);
 
-    END:
     cJSON_Delete(root);
     return 0;
 }

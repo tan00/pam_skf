@@ -2,8 +2,8 @@ project(pam_zcwkey)
 
 cmake_minimum_required(VERSION 3.0)
 
-add_definitions(-Wall)
 add_definitions(-g)
+
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 include_directories(include)

@@ -71,6 +71,10 @@ int DEVMANAGE_PromtDevname(DEVMANAGER *ptr) {
 
     //枚举设备
     ulReval = SKF_EnumDev(TRUE, nameList, &ulBufSize);
+    if(ulReval!=0){
+        printf("no ukey found \n");
+        return ulReval;
+    }
 
     int devCnt = 0;
     char devList[32][128];
@@ -138,7 +142,7 @@ int DEVMANAGER_OpenApp(DEVMANAGER *ptr) {
 
 //认证pin
 int DEVMANAGER_VerifyPIN(DEVMANAGER* ptr){
-    int reCnt = 0;
+    ULONG reCnt = 0;
     ULONG ulReval = SKF_VerifyPIN(ptr->happlication,USER_TYPE ,ptr->userPIN,&reCnt);
     if (ulReval != SAR_OK) {
         ShowErrInfo(ulReval);
@@ -204,7 +208,8 @@ int DEVMANAGER_DevAuth(DEVMANAGER *devman){
         goto END;
     }
 
-    BLOCKCIPHERPARAM param = {0};
+    BLOCKCIPHERPARAM param;
+    memset(&param, 0 ,sizeof param);
     ret = SKF_EncryptInit(SessionKey, param);
     if (ret != SAR_OK){
         errmsg = "SKF_EncryptInit";
