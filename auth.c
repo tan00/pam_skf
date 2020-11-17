@@ -37,10 +37,7 @@ int AUTHFILE_CheckArgs(AUTHFILE *authfile) {
 int AUTHFILE_Read(AUTHFILE *authfile) {
     ULONG ret = 0;
     DEVMANAGER *devman = DEVMANAGER_new();
-    ret = DEVMANAGE_PromtDevname(devman);
-    if (ret!=SAR_OK){
-        goto END;
-    }
+
 
     ret = DEVMANAGER_OpenDev(devman);
     if (ret!=SAR_OK){

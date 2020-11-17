@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+
 
 const char *gAppName = "appAuth";
 //const char *gAppName = "myapp";
@@ -72,9 +75,11 @@ int DEVMANAGE_PromtDevname(DEVMANAGER *ptr) {
     //枚举设备
     ulReval = SKF_EnumDev(TRUE, nameList, &ulBufSize);
     if(ulReval!=0){
-        printf("no ukey found \n");
+        printf("SKF_EnumDev failed! Is root user?\n");
         return ulReval;
     }
+
+    printf("found ukey : %s , ulBufSize=%d \n",nameList ,ulBufSize );
 
     int devCnt = 0;
     char devList[32][128];
@@ -118,12 +123,13 @@ int DEVMANAGER_OpenDev(DEVMANAGER *ptr) {
     ULONG ulReval = SAR_FAIL;
     ulReval = DEVMANAGE_PromtDevname(ptr);
     if (ulReval!=SAR_OK){
+        printf("DEVMANAGE_PromtDevname ret= %d \n",ulReval);
         return ulReval;
     }
 
-
     ulReval = SKF_ConnectDev((LPSTR) ptr->devName, &ptr->devhandle);
     if (ulReval != SAR_OK) {
+        printf("SKF_ConnectDev ret= %d \n",ulReval);
         ShowErrInfo(ulReval);
         return ulReval;
     }
